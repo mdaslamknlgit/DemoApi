@@ -1,14 +1,17 @@
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Enable Application Insights
+builder.Services.AddApplicationInsightsTelemetry();
+
+// Enable Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-var enableSwagger = builder.Configuration.GetValue("ENABLE_SWAGGER", "false").ToLower() == "true";
+// Enable Swagger in production only if ENV variable ENABLE_SWAGGER = true
+var enableSwagger = builder.Configuration
+    .GetValue("ENABLE_SWAGGER", false);
 
 if (enableSwagger)
 {
@@ -18,14 +21,16 @@ if (enableSwagger)
 
 app.UseHttpsRedirection();
 
+// Weather sample API
 var summaries = new[]
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+    "Freezing", "Bracing", "Chilly", "Cool", "Mild",
+    "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
 
 app.MapGet("/weatherforecast", () =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
+    var forecast = Enumerable.Range(1, 5).Select(index =>
         new WeatherForecast
         (
             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
@@ -33,10 +38,23 @@ app.MapGet("/weatherforecast", () =>
             summaries[Random.Shared.Next(summaries.Length)]
         ))
         .ToArray();
+
     return forecast;
 })
 .WithName("GetWeatherForecast")
 .WithOpenApi();
+
+
+// --------------------------------------------------
+// 📌 NEW ENDPOINT FOR APPLICATION INSIGHTS TESTING
+// --------------------------------------------------
+app.MapGet("/error-test", () =>
+{
+    throw new Exception("This is a test exception from /error-test");
+})
+.WithName("ErrorTest")
+.WithOpenApi();
+
 
 app.Run();
 
